@@ -2,11 +2,10 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches:
+      - main
+  pull_request: ~
 
-# Cancel any in-progress CI runs for a PR if it is updated
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
   cancel-in-progress: true
@@ -18,13 +17,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-            url: https://github.com/neovim/neovim/releases/download/nightly/nvim-linux64.tar.gz
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
+            url: https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.tar.gz
+          - os: ubuntu-latest
+            url: https://github.com/neovim/neovim/releases/download/v0.11.0/nvim-linux-x86_64.tar.gz
+          - os: ubuntu-latest
             url: https://github.com/neovim/neovim/releases/download/v0.10.0/nvim-linux64.tar.gz
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             url: https://github.com/neovim/neovim/releases/download/v0.9.0/nvim-linux64.tar.gz
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             url: https://github.com/neovim/neovim/releases/download/v0.8.0/nvim-linux64.tar.gz
 
     steps:
@@ -52,3 +53,16 @@ jobs:
           export VIM="${PWD}/_neovim/share/nvim/runtime"
           nvim --version
           make test
+
+  release:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs:
+      - tests
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          release-type: simple

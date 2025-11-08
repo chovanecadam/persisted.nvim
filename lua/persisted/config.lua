@@ -1,45 +1,54 @@
-local M = {}
-
 local defaults = {
-  save_dir = vim.fn.expand(vim.fn.stdpath("data") .. "/sessions/"), -- directory where session files are saved
-  silent = false, -- silent nvim message when sourcing session file
+  autostart = true, -- Automatically start the plugin on load?
 
-  use_git_branch = false, -- create session files based on the branch of a git enabled repository
-  branch_separator = "@@", -- string used to separate session directory name from branch name
-  default_branch = "main", -- the branch to load if a session file is not found for the current branch
+  -- Function to determine if a session should be saved
+  ---@type fun(): boolean
+  should_save = function()
+    return true
+  end,
 
-  autosave = true, -- automatically save session files when exiting Neovim
-  should_autosave = nil, -- function to determine if a session should be autosaved (resolve to a boolean)
+  save_dir = vim.fn.expand(vim.fn.stdpath("data") .. "/sessions/"), -- Directory where session files are saved
 
-  autoload = false, -- automatically load the session for the cwd on Neovim startup
-  on_autoload_no_session = nil, -- function to run when `autoload = true` but there is no session to load
+  follow_cwd = true, -- Change the session file to match any change in the cwd?
+  use_git_branch = false, -- Include the git branch in the session file name?
+  autoload = false, -- Automatically load the session for the cwd on Neovim startup?
 
-  follow_cwd = true, -- change session file name with changes in current working directory
-  allowed_dirs = nil, -- table of dirs that the plugin will auto-save and auto-load from
-  ignored_dirs = nil, -- table of dirs that are ignored for auto-saving and auto-loading
-  ignored_branches = nil, -- table of branch patterns that are ignored for auto-saving and auto-loading
+  -- Function to run when `autoload = true` but there is no session to load
+  ---@type fun(): any
+  on_autoload_no_session = function() end,
+
+  allowed_dirs = {}, -- Table of dirs that the plugin will start and autoload from
+  ignored_dirs = {}, -- Table of dirs that are ignored for starting and autoloading
 
   telescope = {
-    reset_prompt = true, -- Reset prompt after a telescope action?
-    --TODO: We should add a deprecation notice for the old API here
-    mappings = {
-      change_branch = "<c-b>",
-      copy_session = "<c-c>",
-      delete_session = "<c-d>",
+    mappings = { -- Mappings for managing sessions in Telescope
+      copy_session = "<C-c>",
+      change_branch = "<C-b>",
+      delete_session = "<C-d>",
     },
-    icons = { -- icons displayed in the picker
+    icons = { -- icons displayed in the Telescope picker
+      selected = " ",
+      dir = "  ",
       branch = " ",
-      dir = " ",
-      selected = " ",
     },
   },
 }
 
-M.options = {}
+local M = {
+  config = vim.deepcopy(defaults),
+}
 
-function M.setup(opts)
-  M.options = vim.tbl_deep_extend("force", defaults, opts or {})
-  vim.fn.mkdir(M.options.save_dir, "p")
+---@param opts? table
+M.setup = function(opts)
+  opts = opts or {}
+  M.config = vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts)
 end
 
-return M
+return setmetatable(M, {
+  __index = function(_, key)
+    if key == "setup" then
+      return M.setup
+    end
+    return rawget(M.config, key)
+  end,
+})

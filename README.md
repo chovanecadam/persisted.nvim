@@ -8,9 +8,8 @@
 
 <p align="center">
 <a href="https://github.com/olimorris/persisted.nvim/stargazers"><img src="https://img.shields.io/github/stars/olimorris/persisted.nvim?color=c678dd&logoColor=e06c75&style=for-the-badge"></a>
-<a href="https://github.com/olimorris/persisted.nvim/issues"><img src="https://img.shields.io/github/issues/olimorris/persisted.nvim?color=%23d19a66&style=for-the-badge"></a>
-<a href="https://github.com/olimorris/persisted.nvim/blob/main/LICENSE"><img src="https://img.shields.io/github/license/olimorris/persisted.nvim?style=for-the-badge"></a>
 <a href="https://github.com/olimorris/persisted.nvim/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/olimorris/persisted.nvim/ci.yml?branch=main&label=tests&style=for-the-badge"></a>
+<a href="https://github.com/olimorris/persisted.nvim/releases"><img src="https://img.shields.io/github/v/release/olimorris/persisted.nvim?style=for-the-badge"></a>
 </p>
 
 <p align="center">
@@ -23,8 +22,8 @@
 ## :sparkles: Features
 
 - :evergreen_tree: Supports sessions across multiple git branches
-- :telescope: Telescope extension to work with saved sessions
-- :tickets: Custom events which users can hook into for tighter integration
+- :telescope: Telescope extension to manage sessions
+- :tickets: Custom events which users can hook into for tighter integrations
 - :memo: Simple API to save/stop/restore/delete/list the current session(s)
 - :open_file_folder: Supports autosaving and autoloading of sessions with allowed/ignored directories
 - :floppy_disk: Automatically saves the active session under `.local/share/nvim/sessions` on exiting Neovim
@@ -35,7 +34,7 @@
 
 ## :package: Installation
 
-Install the plugin with your preferred package manager:
+Install and configure the plugin with your preferred package manager:
 
 **[Lazy.nvim](https://github.com/folke/lazy.nvim)**
 
@@ -43,13 +42,12 @@ Install the plugin with your preferred package manager:
 -- Lua
 {
   "olimorris/persisted.nvim",
-  lazy = false, -- make sure the plugin is always loaded at startup
-  config = true
+  event = "BufReadPre", -- Ensure the plugin loads only when a buffer has been loaded
+  opts = {
+    -- Your config goes here ...
+  },
 }
 ```
-
-> [!NOTE]
-> Setting `lazy = true` option may be useful if you use a dashboard
 
 **[Packer](https://github.com/wbthomason/packer.nvim)**
 
@@ -78,11 +76,9 @@ lua << EOF
 EOF
 ```
 
-If you wish to use session _autoloading_ alongside a dashboard plugin, it is recommended that you give this plugin a greater loading priority. With **Packer** the `after` config option can be used and in **Lazy.nvim**, the `priority` property.
+**Telescope extension**
 
-### Telescope extension
-
-Ensure that the telescope extension is loaded with:
+Ensure that the Telescope extension is loaded with:
 
 ```lua
 require("telescope").load_extension("persisted")
@@ -105,211 +101,205 @@ require('telescope').setup({
 
 ## :rocket: Usage
 
-### Commands
+**Commands**
 
 The plugin comes with a number of commands:
 
 - `:SessionToggle` - Determines whether to load, start or stop a session
-- `:SessionStart` - Start recording a session. Useful if `autosave = false`
+- `:SessionStart` - Start recording a session. Useful if `autostart = false`
 - `:SessionStop` - Stop recording a session
 - `:SessionSave` - Save the current session
+- `:SessionSelect` - Load a session from the list (useful if you don't wish to use the Telescope extension)
 - `:SessionLoad` - Load the session for the current directory and current branch (if `git_use_branch = true`)
 - `:SessionLoadLast` - Load the most recent session
 - `:SessionLoadFromFile` - Load a session from a given path
 - `:SessionDelete` - Delete the current session
 
-### Telescope extension
+**Telescope extension**
 
 <!-- panvimdoc-ignore-start -->
 
 <p align="center">
-<img src="https://github.com/olimorris/persisted.nvim/assets/9512444/5bfd6f94-ff70-4f2b-9193-53cdf7140d75" alt="Telescope">
+<img src="https://github.com/user-attachments/assets/3ff91790-b61a-4089-b87d-432e8b4969c2" alt="Telescope">
 </p>
 
 <!-- panvimdoc-ignore-end -->
 
-The Telescope extension may be opened via `:Telescope persisted`. The available actions are:
+The Telescope extension may be opened via `:Telescope persisted`. The default actions are:
 
 - `<CR>` - Open/source the session file
 - `<C-b>` - Add/update the git branch for the session file
 - `<C-c>` - Copy the session file
 - `<C-d>` - Delete the session file
 
-### Global variables
+**Global variables**
 
 The plugin sets a number of global variables throughout its lifecycle:
 
 - `vim.g.persisting` - (bool) Determines if the plugin is active for the current session
-- `vim.g.persisted_exists` - (bool) Determines if a session exists for the current working directory
-- `vim.g.persisted_loaded_session` - (string) The file path to the current session
+- `vim.g.persisting_session` - (string) The file path to the current session (if `follow_cwd` is false)
+- `vim.g.persisted_loaded_session` - (string) The file path to the last loaded session
 
 ## :wrench: Configuration
 
-### Defaults
+**Defaults**
 
 The plugin comes with the following defaults:
 
 ```lua
-require("persisted").setup({
-  save_dir = vim.fn.expand(vim.fn.stdpath("data") .. "/sessions/"), -- directory where session files are saved
-  silent = false, -- silent nvim message when sourcing session file
-  use_git_branch = false, -- create session files based on the branch of a git enabled repository
-  default_branch = "main", -- the branch to load if a session file is not found for the current branch
-  autosave = true, -- automatically save session files when exiting Neovim
-  should_autosave = nil, -- function to determine if a session should be autosaved
-  autoload = false, -- automatically load the session for the cwd on Neovim startup
-  on_autoload_no_session = nil, -- function to run when `autoload = true` but there is no session to load
-  follow_cwd = true, -- change session file name to match current working directory if it changes
-  allowed_dirs = nil, -- table of dirs that the plugin will auto-save and auto-load from
-  ignored_dirs = nil, -- table of dirs that are ignored when auto-saving and auto-loading
-  ignored_branches = nil, -- table of branch patterns that are ignored for auto-saving and auto-loading
+{
+  autostart = true, -- Automatically start the plugin on load?
+
+  -- Function to determine if a session should be saved
+  ---@type fun(): boolean
+  should_save = function()
+    return true
+  end,
+
+  save_dir = vim.fn.expand(vim.fn.stdpath("data") .. "/sessions/"), -- Directory where session files are saved
+
+  follow_cwd = true, -- Change the session file to match any change in the cwd?
+  use_git_branch = false, -- Include the git branch in the session file name?
+  autoload = false, -- Automatically load the session for the cwd on Neovim startup?
+
+  -- Function to run when `autoload = true` but there is no session to load
+  ---@type fun(): any
+  on_autoload_no_session = function() end,
+
+  allowed_dirs = {}, -- Table of dirs that the plugin will start and autoload from
+  ignored_dirs = {}, -- Table of dirs that are ignored for starting and autoloading
+
   telescope = {
-    reset_prompt = true, -- Reset the Telescope prompt after an action?
-    mappings = { -- table of mappings for the Telescope extension
-      change_branch = "<c-b>",
-      copy_session = "<c-c>",
-      delete_session = "<c-d>",
+    mappings = { -- Mappings for managing sessions in Telescope
+      copy_session = "<C-c>",
+      change_branch = "<C-b>",
+      delete_session = "<C-d>",
     },
-    icons = { -- icons displayed in the picker, set to nil to disable entirely
+    icons = { -- icons displayed in the Telescope picker
+      selected = " ",
+      dir = "  ",
       branch = " ",
-      dir = " ",
-      selected = " ",
     },
   },
-})
+}
 ```
 
-### What is saved in the session?
+**What is saved in the session?**
 
 As the plugin uses Vim's `:mksession` command then you may change the `vim.o.sessionoptions` value to determine what to write into the session. Please see `:h sessionoptions` for more information.
 
 > [!NOTE]
-> The author uses: `vim.o.sessionoptions = "buffers,curdir,folds,tabpages,winpos,winsize"`
+> The author uses: `vim.o.sessionoptions = "buffers,curdir,folds,globals,tabpages,winpos,winsize"`
 
-### Session save location
+**Session save location**
 
 The location of the session files may be changed by altering the `save_dir` configuration option. For example:
 
 ```lua
-require("persisted").setup({
+{
   save_dir = vim.fn.expand(vim.fn.stdpath("data") .. "/sessions/"), -- Resolves to ~/.local/share/nvim/sessions/
-})
+}
 ```
 
 > [!NOTE]
 > The plugin may be unable to find existing sessions if the `save_dir` value is changed
 
-### Git branching
+**Git branching**
 
 One of the plugin's core features is the ability to have multiple session files for a given project, by using git branches. To enable git branching:
 
 ```lua
-require("persisted").setup({
+{
   use_git_branch = true,
-})
+}
 ```
 
-### Autosaving
+**Autostart**
 
-By default, the plugin will automatically save a Neovim session to disk when the `VimLeavePre` event is triggered. Autosaving can be turned off by:
+By default, the plugin will automatically start when the setup function is called. This results in a Neovim session being saved to disk when the `VimLeavePre` event is triggered. This can be disabled by:
 
 ```lua
-require("persisted").setup({
-  autosave = false,
-})
+{
+  autostart = false,
+}
 ```
 
-Autosaving can be further controlled for certain directories by specifying `allowed_dirs` and `ignored_dirs`.
+Autostarting can be further controlled for certain directories by specifying `allowed_dirs` and `ignored_dirs`.
 
-There may be occasions when you do not wish to autosave; perhaps when a dashboard or a certain buftype is present. To control this, a callback function, `should_autosave`, may be used which should return a boolean value.
+**`should_save`**
+
+There may be occasions when you do not wish to save the session; perhaps when a dashboard or a certain filetype is present. To handle this, the `should_save` function may be used which should return a boolean value.
 
 ```lua
-require("persisted").setup({
-  should_autosave = function()
-    -- do not autosave if the alpha dashboard is the current filetype
+{
+  ---@return bool
+  should_save = function()
+    -- Do not save if the alpha dashboard is the current filetype
     if vim.bo.filetype == "alpha" then
       return false
     end
     return true
   end,
-})
+}
 ```
 
-Of course, if you wish to manually save the session when autosaving is disabled, the `:SessionSave` command can be used.
+Of course, if you wish to manually save the session the `:SessionSave` command can be used.
 
-> [!NOTE]
-> If `autosave = false` then the `should_autosave` callback will not be executed.
-
-### Autoloading
+**Autoloading**
 
 The plugin can be enabled to automatically load sessions when Neovim is started. Whilst off by default, this can be turned on by:
 
 ```lua
-require("persisted").setup({
+{
   autoload = true,
-})
+}
 ```
 
-You can also provide a function to run when `autoload = true` but there is no session to be loaded:
+You can also provide a function to run when `autoload = true` and there is no session to load:
 
 ```lua
-require("persisted").setup({
+{
   autoload = true,
   on_autoload_no_session = function()
     vim.notify("No existing session to load.")
   end
-})
+}
 ```
 
-Autoloading can be further controlled for certain directories by specifying `allowed_dirs` and `ignored_dirs`.
+Autoloading can be further controlled for directories in the `allowed_dirs` and `ignored_dirs` config tables.
 
-> [!NOTE]
-> Autoloading will not occur if the plugin is lazy loaded or a user opens Neovim with arguments other than a single directory argument. For example: `nvim some_file.rb` will not result in autoloading but `nvim some/existing/path` or `nvim .` will.
+> [!IMPORTANT]
+> By design, the plugin will not autoload a session when any arguments are passed to Neovim such as `nvim my_file.py`
 
-### Following current working directory
+**Allowed directories**
 
-There may be a need to change the working directory to quickly access files in other directories without changing the current session's name on save. This behavior can be configured with `follow_cwd = false`.
-
-By default, the session name will match the current working directory:
+You may specify a table of directories for which the plugin will start and/or autoload from. For example:
 
 ```lua
-require("persisted").setup({
-  follow_cwd = true,
-})
-```
-
-> [!NOTE]
-> If `follow_cwd = false` the session name is stored upon loading under the global variable `vim.g.persisting_session`. This variable can be manually adjusted if changes to the session name are needed. Alternatively, if `follow_cwd = true` then `vim.g.persisting_session = nil`.
-
-### Allowed directories
-
-You may specify a table of directories for which the plugin will autosave and/or autoload from. For example:
-
-```lua
-require("persisted").setup({
+{
   allowed_dirs = {
     "~/.dotfiles",
     "~/Code",
   },
-})
+}
 ```
 
-Specifying `~/Code` will autosave and autoload from that directory as well as all its sub-directories.
+Specifying `~/Code` will start and autoload from that directory as well as all its sub-directories.
 
 > [!NOTE]
-> If `allowed_dirs` is left at its default value and `autosave` and/or `autoload` are set to `true`, then the plugin will autoload/autosave from _any_ directory
+> If `allowed_dirs` is left at its default value and `autostart` and/or `autoload` are set to `true`, then the plugin will start and autoload from _any_ directory
 
-### Ignored directories
+**Ignored directories**
 
-You may specify a table of directories for which the plugin will **never** autosave and autoload from. For example:
+You may specify a table of directories for which the plugin will **never** start and autoload from. For example:
 
 ```lua
-require("persisted").setup({
+{
   ignored_dirs = {
     "~/.config",
     "~/.local/nvim"
   },
-})
+}
 ```
 
 Specifying `~/.config` will prevent any autosaving and autoloading from that directory as well as all its sub-directories.
@@ -317,60 +307,45 @@ Specifying `~/.config` will prevent any autosaving and autoloading from that dir
 You can also specify exact directory matches to ignore. In this case, unlike the default behavior which ignores all children of the ignored directory, this will ignore only the specified child. For example:
 
 ```lua
-require("persisted").setup({
+{
   ignored_dirs = {
     "~/.config",
     "~/.local/nvim",
     { "/", exact = true },
     { "/tmp", exact = true }
   },
-})
+}
 ```
 
 In this setup, `~/.config` and `~/.local/nvim` are still going to behave in their default setting (ignoring all listed directory and its children), however `/` and `/tmp` will only ignore those directories exactly.
 
-### Ignored branches
-
-You may specify a table of patterns that match against branches for which the plugin will **never** autosave and autoload from:
-
-```lua
-require("persisted").setup({
-  ignored_branches = {
-    "^master",
-    "feature/%u"
-  },
-})
-```
-
-### Events / Callbacks
+**Events / Callbacks**
 
 The plugin fires events at various points during its lifecycle:
 
-- `PersistedLoadPre` - For _before_ a session is loaded
-- `PersistedLoadPost` - For _after_ a session is loaded
-- `PersistedTelescopeLoadPre` - For _before_ a session is loaded via Telescope
-- `PersistedTelescopeLoadPost` - For _after_ a session is loaded via Telescope
-- `PersistedSavePre` - For _before_ a session is saved
-- `PersistedSavePost` - For _after_ a session is saved
 - `PersistedDeletePre` - For _before_ a session is deleted
 - `PersistedDeletePost` - For _after_ a session is deleted
-- `PersistedStateChange` - For when a session is _started_ or _stopped_
-- `PersistedToggled` - For when a session is toggled
+- `PersistedLoadPre` - For _before_ a session is loaded
+- `PersistedLoadPost` - For _after_ a session is loaded
+- `PersistedSavePre` - For _before_ a session is saved
+- `PersistedSavePost` - For _after_ a session is saved
+- `PersistedSelectPre` - For _before_ a session is selected (via `:SessionSelect`)
+- `PersistedSelectPost` - For _after_ a session is selected
+- `PersistedStart` - For when a session has _started_
+- `PersistedStop` - For when a session has _stopped_
+- `PersistedToggle` - For when a session is toggled
+- `PersistedTelescopeLoadPre` - For _before_ a session is loaded via Telescope
+- `PersistedTelescopeLoadPost` - For _after_ a session is loaded via Telescope
 
 These events can be consumed anywhere within your configuration by utilising the `vim.api.nvim_create_autocmd` function.
-
-#### Example use case
 
 A commonly requested example is to use the Telescope extension to load a session, saving the current session before clearing all of the open buffers:
 
 ```lua
-local group = vim.api.nvim_create_augroup("PersistedHooks", {})
-
-vim.api.nvim_create_autocmd({ "User" }, {
+vim.api.nvim_create_autocmd("User", {
   pattern = "PersistedTelescopeLoadPre",
-  group = group,
   callback = function(session)
-    -- Save the currently loaded session using a global variable
+    -- Save the currently loaded session passing in the path to the current session
     require("persisted").save({ session = vim.g.persisted_loaded_session })
 
     -- Delete all of the open buffers
@@ -379,34 +354,184 @@ vim.api.nvim_create_autocmd({ "User" }, {
 })
 ```
 
-#### Using callback data
-
-When certain events are fired, session data is made available for the user to consume, for example:
+Or, to ensure that certain filetypes are removed from the session before it's saved:
 
 ```lua
-{
-  branch = "main",
-  dir_path = "Code/Neovim/persisted.nvim",
-  file_path = "/Users/Oli/.local/share/nvim/sessions/%Users%Oli%Code%Neovim%persisted.nvim@@main.vim",
-  name = "Code/Neovim/persisted.nvim@@main",
-}
-```
-
-To consume this data, use the `session.data` table in your autocmd:
-
-```lua
-vim.api.nvim_create_autocmd({ "User" }, {
-  pattern = "PersistedLoadPost",
-  group = group,
-  callback = function(session)
-    print(session.data.branch)
+vim.api.nvim_create_autocmd("User", {
+  pattern = "PersistedSavePre",
+  callback = function()
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.bo[buf].filetype == "codecompanion" then
+        vim.api.nvim_buf_delete(buf, { force = true })
+      end
+    end
   end,
 })
 ```
 
-> [!NOTE]
-> This data is available for the `PersistedLoad`, `PersistedDelete` and `PersistedTelescope` events
+**Highlights**
 
-## :page_with_curl: License
+The plugin also comes with pre-defined highlight groups for the Telescope implementation:
 
-[MIT](https://github.com/olimorris/persisted.nvim/blob/main/LICENSE)
+- `PersistedTelescopeSelected`
+- `PersistedTelescopeDir`
+- `PersistedTelescopeBranch`
+
+## :building_construction: Extending the Plugin
+
+The plugin has been designed to be fully extensible. All of the functions in the [init.lua](https://github.com/olimorris/persisted.nvim/blob/main/lua/persisted/init.lua) and [utils.lua](https://github.com/olimorris/persisted.nvim/blob/main/lua/persisted/utils.lua) file are public.
+
+**Custom autoloading** by [neandrake](https://github.com/neandrake)
+
+Autoloading a session if arguments are passed to Neovim:
+
+```lua
+{
+  "olimorris/persisted.nvim",
+  lazy = false,
+  opts = {
+    autoload = true,
+  },
+}
+
+-- Somewhere in your config
+local persisted = require("persisted")
+vim.api.nvim_create_autocmd("VimEnter", {
+  nested = true,
+  callback = function()
+    if vim.g.started_with_stdin then
+      return
+    end
+
+    local forceload = false
+    if vim.fn.argc() == 0 then
+      forceload = true
+    elseif vim.fn.argc() == 1 then
+      local dir = vim.fn.expand(vim.fn.argv(0))
+      if dir == '.' then
+        dir = vim.fn.getcwd()
+      end
+
+      if vim.fn.isdirectory(dir) ~= 0 then
+        forceload = true
+      end
+    end
+
+    persisted.autoload({ force = forceload })
+  end,
+})
+```
+
+**Git branching and sub-directories** by [mrloop](https://github.com/mrloop)
+
+As per [#149](https://github.com/olimorris/persisted.nvim/discussions/149), if you invoke Neovim from a sub-directory then the git branch will not be detected. The code below amends for this:
+
+```lua
+{
+  "olimorris/persisted.nvim",
+  lazy = false,
+  opts = {
+    autoload = true,
+    autosave = true,
+    use_git_branch = true,
+  },
+  config = function(_, opts)
+    local persisted = require("persisted")
+    persisted.branch = function()
+      local branch = vim.fn.systemlist("git branch --show-current")[1]
+      return vim.v.shell_error == 0 and branch or nil
+    end
+    persisted.setup(opts)
+  end,
+}
+```
+
+**Ignore certain branches**
+
+If you'd like to ignore certain branches from being saved as a session:
+
+```lua
+{
+  "olimorris/persisted.nvim",
+  lazy = false,
+  opts = {
+    autostart = true,
+    use_git_branch = true,
+  },
+  config = function(_, opts)
+    local persisted = require("persisted")
+    local utils = require("persisted.utils")
+    local ignored_branches = {
+      "feature_branch"
+      "bug_fix_branch"
+    }
+
+    persisted.setup(opts)
+
+    -- Only start the plugin if the branch isn't in the ignored list
+    if not utils.in_table(persisted.branch(), ignored_branches) then
+      persisted.start()
+    end
+  end
+}
+```
+
+**Only save session if a minimum number of buffers are present**
+
+```lua
+{
+  "olimorris/persisted.nvim",
+  lazy = false,
+  config = function()
+    local persisted = require("persisted")
+    persisted.setup({
+      should_save = function()
+        -- Ref: https://github.com/folke/persistence.nvim/blob/166a79a55bfa7a4db3e26fc031b4d92af71d0b51/lua/persistence/init.lua#L46
+        local bufs = vim.tbl_filter(function(b)
+          if vim.bo[b].buftype ~= "" or vim.tbl_contains({ "gitcommit", "gitrebase", "jj" }, vim.bo[b].filetype) then
+            return false
+          end
+          return vim.api.nvim_buf_get_name(b) ~= ""
+        end, vim.api.nvim_list_bufs())
+        if #bufs < 1 then
+          return false
+        end
+        return true
+      end,
+    })
+  end,
+}
+```
+
+**Only save a session in a certain dir**
+
+You may wish to only save a session if the current working directory is in a table of allowed directories:
+
+```lua
+{
+  "olimorris/persisted.nvim",
+  lazy = false,
+  config = function()
+    local persisted = require("persisted")
+    local utils = require("persisted.utils")
+    local allowed_dirs = {
+      "~/code",
+      "~/notes/api"
+    }
+
+    persisted.setup({
+      should_save = function()
+        return utils.dirs_match(vim.fn.getcwd(), allowed_dirs)
+      end,
+    })
+  end,
+}
+```
+
+<!-- panvimdoc-ignore-start -->
+
+## :clap: Acknowledgements
+
+- [persistence.nvim](https://github.com/folke/persistence.nvim) for the origin of this plugin and the continued good ideas that I implement
+
+<!-- panvimdoc-ignore-end -->
